@@ -1,1 +1,11 @@
 -e .
+aws-cdk.core
+aws-cdk.aws-ec2
+aws-cdk.aws-iam
+aws-cdk.aws-logs
+aws-cdk.aws-guardduty
+aws-cdk.aws-cloudtrail
+aws-cdk.aws-s3
+aws-cdk.aws-config
+pylint
+pep8
