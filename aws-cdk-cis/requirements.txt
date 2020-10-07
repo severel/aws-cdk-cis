@@ -7,5 +7,6 @@ aws-cdk.aws-guardduty
 aws-cdk.aws-cloudtrail
 aws-cdk.aws-s3
 aws-cdk.aws-config
+aws-cdk.aws-kms
 pylint
 pep8

@@ -5,7 +5,8 @@ from aws_cdk import (
     aws_cloudtrail as cloudtrail,
     aws_logs as logs,
     aws_s3 as s3,
-    aws_config as config
+    aws_config as config,
+    aws_kms as kms
 )
 
 
@@ -31,11 +32,16 @@ class AwsCdkCisStack(core.Stack):
                                       server_access_logs_bucket=cloudtrail_bucket_accesslogs,
                                       )
 
+        cloudtrail_kms = kms.Key(self, "CloudTrailKey",
+                                 enable_key_rotation=True
+                                 )
+
         trail = cloudtrail.Trail(self, "CloudTrail",
                                  enable_file_validation=True,
                                  is_multi_region_trail=True,
                                  include_global_service_events=True,
                                  send_to_cloud_watch_logs=True,
                                  cloud_watch_logs_retention=logs.RetentionDays.FOUR_MONTHS,
-                                 bucket=cloudtrail_bucket
+                                 bucket=cloudtrail_bucket,
+                                 kms_key=cloudtrail_kms
                                  )
