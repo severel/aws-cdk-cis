@@ -29,6 +29,7 @@ class AwsCdkCisStack(core.Stack):
 
         # securityhub_instance = securityhub.CfnHub(self, 'SecurityHub')
 
+        # Ensure AWS Config is enabled / Ensure CloudTrail is enabled in all Regions 2.1 - 2.8
         cloudtrail_bucket_accesslogs = s3.Bucket(self, "CloudTrailS3Accesslogs",
                                                  block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
                                                  encryption=s3.BucketEncryption.S3_MANAGED,
@@ -175,6 +176,7 @@ class AwsCdkCisStack(core.Stack):
         #                                  removal_policy=core.RemovalPolicy.RETAIN
         #                                  )
 
+        # Ensure a log metric filter and alarm exist for 3.1 – 3.14
         security_notifications_topic = sns.Topic(self, 'CIS_Topic',
                                                  display_name='CIS_Topic',
                                                  topic_name='CIS_Topic'
@@ -189,7 +191,6 @@ class AwsCdkCisStack(core.Stack):
         cloudwatch_actions_cis = cloudwatch_actions.SnsAction(
             security_notifications_topic)
 
-        # 3.1 – Ensure a log metric filter and alarm exist for unauthorized API calls
         cis_metricfilter_alarms = {
             'CIS-3.1-UnauthorizedAPICalls': '($.errorCode="*UnauthorizedOperation") || ($.errorCode="AccessDenied*")',
             'CIS-3.2-ConsoleSigninWithoutMFA': '($.eventName="ConsoleLogin") && ($.additionalEventData.MFAUsed !="Yes")',
