@@ -12,6 +12,9 @@ from aws_cdk import (
     aws_cloudwatch_actions as cloudwatch_actions,
     aws_securityhub as securityhub,
     cloudformation_include as cfn_inc,
+    aws_guardduty as guardduty,
+    aws_events as events,
+    aws_events_targets as events_targets
 )
 
 
@@ -43,6 +46,7 @@ class AwsCdkCisStack(core.Stack):
                                  enable_key_rotation=True
                                  )
 
+        # CloudTrail - single account, not Organization
         trail = cloudtrail.Trail(self, "CloudTrail",
                                  enable_file_validation=True,
                                  is_multi_region_trail=True,
@@ -95,13 +99,6 @@ class AwsCdkCisStack(core.Stack):
             resources=['*']
         ))
 
-        # config_role = iam.Role(self, "ConfigRole",
-        #                        assumed_by=iam.ServicePrincipal(
-        #                            'config.amazonaws.com'),
-        #                        managed_policies=[iam.ManagedPolicy.from_aws_managed_policy_name(
-        #                            'service-role/AWS_ConfigRole')]
-        #                        )
-
         config_role = iam.CfnServiceLinkedRole(self,
                                                id='ServiceLinkedRoleConfig',
                                                aws_service_name='config.amazonaws.com'
@@ -120,6 +117,7 @@ class AwsCdkCisStack(core.Stack):
                                                             include_global_resource_types=True
                                                         )
                                                         )
+
         config_bucket = s3.Bucket(self, "ConfigS3",
                                   block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
                                   encryption=s3.BucketEncryption.S3_MANAGED,
@@ -130,7 +128,6 @@ class AwsCdkCisStack(core.Stack):
             iam.PolicyStatement(
                 actions=['s3:GetBucketAcl'],
                 effect=iam.Effect.ALLOW,
-                # principals=[config_role],
                 principals=[iam.ServicePrincipal('config.amazonaws.com')],
                 resources=[config_bucket.bucket_arn]
             )
@@ -140,7 +137,6 @@ class AwsCdkCisStack(core.Stack):
             iam.PolicyStatement(
                 actions=['s3:PutObject'],
                 effect=iam.Effect.ALLOW,
-                # principals=[config_role],
                 principals=[iam.ServicePrincipal('config.amazonaws.com')],
                 resources=[config_bucket.arn_for_objects(
                     'AWSLogs/'+core.Stack.of(self).account+'/Config/*')],
@@ -152,6 +148,20 @@ class AwsCdkCisStack(core.Stack):
         config_delivery_stream = config.CfnDeliveryChannel(self, "ConfigDeliveryChannel",
                                                            s3_bucket_name=config_bucket.bucket_name
                                                            )
+
+        # Config Aggregator in Organizations account
+        # config_aggregator = config.CfnConfigurationAggregator(self, 'ConfigAggregator',
+        #                                                       configuration_aggregator_name='ConfigAggregator',
+        #                                                       organization_aggregation_source=config.CfnConfigurationAggregator.OrganizationAggregationSourceProperty(
+        #                                                           role_arn=iam.Role(self, "AWSConfigRoleForOrganizations",
+        #                                                                             assumed_by=iam.ServicePrincipal(
+        #                                                                                 'config.amazonaws.com'),
+        #                                                                             managed_policies=[iam.ManagedPolicy.from_aws_managed_policy_name(
+        #                                                                                 'service-role/AWSConfigRoleForOrganizations')]
+        #                                                                             ).role_arn,
+        #                                                           all_aws_regions=True
+        #                                                       )
+        #                                                       )
 
         # 2.9 – Ensure VPC flow logging is enabled in all VPCs
         # vpc = ec2.Vpc.from_lookup(self, "VPC",
@@ -169,6 +179,7 @@ class AwsCdkCisStack(core.Stack):
                                                  display_name='CIS_Topic',
                                                  topic_name='CIS_Topic'
                                                  )
+
         sns.Subscription(self, 'CIS_Subscription',
                          topic=security_notifications_topic,
                          protocol=sns.SubscriptionProtocol.EMAIL,
@@ -243,10 +254,17 @@ class AwsCdkCisStack(core.Stack):
                                 role_name='AWSSupportAccess'
                                 )
 
-        # * EBS default encryption should be enabled
-        # GuardDuty should be enabled
+        guardduty_detector = guardduty.CfnDetector(self, 'GuardDutyDetector',
+                                                   enable=True
+                                                   )
 
-        # Destructive
-        # * Delete default VPC
-        # * The VPC default security group should not allow inbound and outbound traffic
-        # delete from all SG 0.0.0.0/0 port 22,
+        guardduty_event = events.Rule(self, 'GuardDutyEvent',
+                                      rule_name='guardduty-notification',
+                                      description='GuardDuty Notification',
+                                      event_pattern=events.EventPattern(
+                                          source=['aws.guardduty'], detail_type=['GuardDuty Finding']),
+                                      targets=[events_targets.SnsTopic(
+                                          security_notifications_topic)]
+                                      )
+
+        # * EBS default encryption could be enabled

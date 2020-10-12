@@ -11,7 +11,10 @@ aws-cdk.aws-kms
 aws-cdk.aws-sns
 aws-cdk.aws-securityhub
 aws-cdk.aws-cloudwatch
+aws-cdk.aws-guardduty
 aws-cdk.aws-cloudwatch_actions
 aws-cdk.cloudformation_include
+aws-cdk.aws-events
+aws-cdk.aws-events-targets
 pylint
 pep8
