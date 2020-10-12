@@ -23,9 +23,7 @@ class AwsCdkCisStack(core.Stack):
     def __init__(self, scope: core.Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        # enable_ebs_default_encryption = ec2.EbsDeviceOptionsBase.
-        # enable_guardduty = guardduty.CfnDetector.enable("true")
-        # password_policy = iam.
+        security_distribution_list_email = 'example@example.com'
 
         # securityhub_instance = securityhub.CfnHub(self, 'SecurityHub')
 
@@ -185,7 +183,7 @@ class AwsCdkCisStack(core.Stack):
         sns.Subscription(self, 'CIS_Subscription',
                          topic=security_notifications_topic,
                          protocol=sns.SubscriptionProtocol.EMAIL,
-                         endpoint='example@example.com'
+                         endpoint=security_distribution_list_email
                          )
 
         cloudwatch_actions_cis = cloudwatch_actions.SnsAction(
